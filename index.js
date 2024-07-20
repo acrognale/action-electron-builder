@@ -125,7 +125,7 @@ const runAction = () => {
 	} else {
 		log("Running the build script…");
 		if (usePnpm) {
-			run(`pnpm run ${buildScriptName} --if-present`, pkgRoot);
+			run(`pnpm run ${buildScriptName}`, pkgRoot);
 		} else if (useNpm) {
 			run(`npm run ${buildScriptName} --if-present`, pkgRoot);
 		} else {
