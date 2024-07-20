@@ -81,10 +81,12 @@ const runAction = () => {
 
 	const pkgJsonPath = join(pkgRoot, "package.json");
 	const pkgLockPath = join(pkgRoot, "package-lock.json");
+	const pnpmLockPath = join(process.cwd(), "pnpm-lock.yaml"); 
 
-	// Determine whether NPM should be used to run commands (instead of Yarn, which is the default)
+	// Determine whether NPM, Yarn, or pnpm should be used to run commands
+	const usePnpm = existsSync(pnpmLockPath);
 	const useNpm = existsSync(pkgLockPath);
-	log(`Will run ${useNpm ? "NPM" : "Yarn"} commands in directory "${pkgRoot}"`);
+	log(`Will run ${usePnpm ? "pnpm" : useNpm ? "NPM" : "Yarn"} commands in directory "${pkgRoot}"`);
 
 	// Make sure `package.json` file exists
 	if (!existsSync(pkgJsonPath)) {
@@ -109,8 +111,12 @@ const runAction = () => {
 	if (skipInstall) {
 		log("Skipping install script because `skip_install` option is set");
 	} else {
-		log(`Installing dependencies using ${useNpm ? "NPM" : "Yarn"}…`);
-		run(useNpm ? "npm install" : "yarn", pkgRoot);
+		log(`Installing dependencies using ${usePnpm ? "pnpm" : useNpm ? "NPM" : "Yarn"}…`);
+		if (usePnpm) {
+			run("pnpm install", process.cwd()); 
+		} else {
+			run(useNpm ? "npm install" : "yarn", pkgRoot);
+		}
 	}
 
 	// Run NPM build script if it exists
@@ -118,7 +124,9 @@ const runAction = () => {
 		log("Skipping build script because `skip_build` option is set");
 	} else {
 		log("Running the build script…");
-		if (useNpm) {
+		if (usePnpm) {
+			run(`pnpm run ${buildScriptName} --if-present`, pkgRoot);
+		} else if (useNpm) {
 			run(`npm run ${buildScriptName} --if-present`, pkgRoot);
 		} else {
 			// TODO: Use `yarn run ${buildScriptName} --if-present` once supported
@@ -135,7 +143,7 @@ const runAction = () => {
 	for (let i = 0; i < maxAttempts; i += 1) {
 		try {
 			run(
-				`${useNpm ? "npx --no-install" : "yarn run"} ${cmd} --${platform} ${
+				`${usePnpm ? "pnpm exec" : useNpm ? "npx --no-install" : "yarn run"} ${cmd} --${platform} ${
 					release ? "--publish always" : ""
 				} ${args}`,
 				appRoot,
